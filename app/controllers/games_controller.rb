@@ -1,25 +1,30 @@
 require "open-uri"
+
 class GamesController < ApplicationController
+  VOWELS = %w(A E I O U Y)
 
   def new
-    @letters = ("A".."Z").to_a.sample(10)
+    @letters = Array.new(5) { VOWELS.sample }
+    @letters += Array.new(5) { (('A'..'Z').to_a - VOWELS).sample }
+    @letters.shuffle!
   end
 
   def score
-    word = params[:word]
-    respuesta = api_consult(word)
-    if respuesta
-      @answer = "It is a #{word} in English."
-    else
-      @answer = "The #{word} doesn't exist."
-    end
+    @letters = params[:letters].split
+    @word = (params[:word] || "").upcase
+    @included = included?(@word, @letters)
+    @english_word = english_word?(@word)
   end
 
   private
 
-  def api_consult
-    api_response = URI.open("https://dictionary.lewagon.com/#{word}").read
-    response_in_hash =JSON.parse(api_response)
-    return response_in_hash["found"]
+  def included?(word, letters)
+    word.chars.all? { |letter| word.count(letter) <= letters.count(letter) }
+  end
+
+  def english_word?(word)
+    response = URI.open("https://dictionary.lewagon.com/#{word}")
+    json = JSON.parse(response.read)
+    json['found']
   end
 end
